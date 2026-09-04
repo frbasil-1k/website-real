@@ -1,22 +1,89 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { motion, AnimatePresence } from "motion/react";
 import { Container } from "./container";
 
-const navigationItems = [
-  { href: "/", label: "Home" },
-  { href: "/activities", label: "Activities" },
-  { href: "/hackathon", label: "Hackathon" },
-  { href: "/about", label: "About" },
+const navigation = [
+  { label: "Home", href: "/" },
+  { label: "About", href: "/#about" },
+  { label: "Activities", href: "/#activities" },
+  { label: "Hackathon", href: "/#hackathon" },
+  { label: "Challenges", href: "/#open-challenges" },
+  { label: "Leaderboard", href: "/leaderboard" },
+  { label: "XP System", href: "/xp-system" },
+  {
+    label: "GitHub",
+    href: "https://github.com/DBCE-Coders-Club",
+  },
 ] as const;
 
-export function GlobalNavigation() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const pathname = usePathname();
+// Level icons
+const levelIcons: Record<number, string> = {
+  1: "/level-icons/level-1.png",
+  2: "/level-icons/level-2.png",
+  3: "/level-icons/level-3.png",
+  4: "/level-icons/level-4.png",
+  5: "/level-icons/level-5.png",
+  6: "/level-icons/level-6.png",
+  7: "/level-icons/level-7.png",
+};
 
+// Level titles
+const levelNames: Record<number, string> = {
+  1: "Rookie",
+  2: "Novice Coder",
+  3: "Code Explorer",
+  4: "Code Warrior",
+  5: "Coding Champion",
+  6: "Code Master",
+  7: "Code Legend",
+};
+
+// XP required for each level
+const levelRequirements: Record<number, number> = {
+  1: 500,
+  2: 1000,
+  3: 2000,
+  4: 3500,
+  5: 5000,
+  6: 7000,
+  7: 10000,
+};
+
+export function GlobalNavigation() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  // TEMPORARY DATA
+  // These will later come from your database.
+  const currentLevel = 1;
+  const currentXP = 350;
+
+  const nextLevelXP =
+    levelRequirements[currentLevel] ?? levelRequirements[7];
+
+  const progress =
+    currentLevel >= 7
+      ? 100
+      : Math.min((currentXP / nextLevelXP) * 100, 100);
+
+  // Logout
+  const handleLogout = () => {
+    localStorage.removeItem("dbce-logged-in");
+    setProfileOpen(false);
+    router.replace("/login");
+  };
+
+  // Close mobile menu with Escape
   useEffect(() => {
     if (!isMenuOpen) {
       return;
@@ -30,12 +97,28 @@ export function GlobalNavigation() {
     }
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isMenuOpen]);
+
+  useEffect(() => {
+  setProfileOpen(false);
+  setIsMenuOpen(false);
+}, [pathname]);
+
+  // Login page should not show navbar
+  if (pathname === "/login") {
+    return null;
+  }
 
   return (
     <header className="border-b border-border bg-background">
       <Container className="flex min-h-[var(--nav-height)] items-center justify-between gap-6 px-page">
+
+        {/* LOGO */}
+
         <Link
           href="/"
           className="text-sm font-semibold tracking-tight text-foreground"
@@ -44,37 +127,319 @@ export function GlobalNavigation() {
         </Link>
 
         <nav aria-label="Primary navigation" className="relative">
-          <ul className="hidden items-center gap-1 sm:flex">
-            {navigationItems.map((item) => {
-              const isCurrentPage = pathname === item.href;
 
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    aria-current={isCurrentPage ? "page" : undefined}
-                    className={`rounded-card px-3 py-2 text-sm font-medium ${
-                      isCurrentPage
-                        ? "bg-surface text-foreground"
-                        : "text-muted hover:bg-surface hover:text-foreground"
-                    }`}
+          {/* ================= DESKTOP NAV ================= */}
+
+          <div className="hidden items-center gap-1 sm:flex">
+
+            <ul className="flex items-center gap-1">
+              {navigation.map((item) => {
+                const isCurrentPage = pathname === item.href;
+
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      aria-current={
+                        isCurrentPage ? "page" : undefined
+                      }
+                      className={`rounded-card px-3 py-2 text-sm font-medium transition-colors ${
+                        isCurrentPage
+                          ? "bg-surface text-foreground"
+                          : "text-muted hover:bg-surface hover:text-foreground"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* ================= PROFILE ================= */}
+
+            <div className="relative ml-3">
+
+              {/* PROFILE BUTTON */}
+
+              <motion.button
+                type="button"
+                onClick={() =>
+                  setProfileOpen((value) => !value)
+                }
+                whileTap={{ scale: 0.95 }}
+                className="group flex items-center gap-2 rounded-full border border-border p-1 pr-3 transition-all duration-300 hover:border-accent"
+                aria-label="Open student profile"
+              >
+                <div className="relative h-9 w-9 overflow-hidden rounded-full border border-border bg-muted">
+
+                  <Image
+                    src={levelIcons[currentLevel]}
+                    alt={`Level ${currentLevel}`}
+                    fill
+                    sizes="36px"
+                    className="object-cover transition-transform duration-300 group-hover:scale-110"
+                  />
+
+                </div>
+
+                <div className="hidden text-left sm:block">
+
+                  <p className="font-mono text-[9px] tracking-[0.12em] text-muted-foreground">
+                    LVL
+                  </p>
+
+                  <p className="text-xs font-semibold">
+                    {currentLevel}
+                  </p>
+
+                </div>
+              </motion.button>
+
+
+              {/* ================= PROFILE DROPDOWN ================= */}
+
+              <AnimatePresence>
+                {profileOpen && (
+                  <motion.div
+                    initial={{
+                      opacity: 0,
+                      y: -8,
+                      scale: 0.97,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                    }}
+                    exit={{
+                      opacity: 0,
+                      y: -8,
+                      scale: 0.97,
+                    }}
+                    transition={{
+                      duration: 0.2,
+                    }}
+                    className="absolute right-0 top-14 z-[100] w-[330px] overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
                   >
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+
+                    {/* PROFILE HEADER */}
+
+                    <div className="relative overflow-hidden border-b border-border p-6">
+
+                      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-accent/10 blur-2xl" />
+
+                      <div className="relative flex items-center gap-4">
+
+                        {/* LARGE LEVEL ICON */}
+
+                        <motion.div
+                          initial={{ rotate: -8 }}
+                          animate={{ rotate: 0 }}
+                          className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-accent/30 bg-muted"
+                        >
+                          <Image
+                            src={levelIcons[currentLevel]}
+                            alt={`Level ${currentLevel}`}
+                            fill
+                            sizes="80px"
+                            className="object-cover"
+                          />
+                        </motion.div>
+
+
+                        {/* STUDENT INFORMATION */}
+
+                        <div className="min-w-0">
+
+                          <p className="font-mono text-[9px] tracking-[0.2em] text-muted-foreground">
+                            OPERATOR
+                          </p>
+
+                          <p className="mt-1 truncate text-lg font-bold">
+                            Bhumika Khandelwal
+                          </p>
+
+                          <div className="mt-2 flex items-center gap-2">
+
+                            <span className="font-mono text-[10px] font-bold text-accent">
+                              LEVEL {currentLevel}
+                            </span>
+
+                            <span className="text-muted-foreground">
+                              /
+                            </span>
+
+                            <span className="font-mono text-[10px] text-muted-foreground">
+                              {levelNames[currentLevel]}
+                            </span>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+
+                    {/* ================= XP ================= */}
+
+                    <div className="p-6">
+
+                      <div className="mb-3 flex items-end justify-between">
+
+                        <div>
+
+                          <p className="font-mono text-[9px] tracking-[0.18em] text-muted-foreground">
+                            EXPERIENCE
+                          </p>
+
+                          <p className="mt-1 text-xl font-bold">
+                            {currentXP.toLocaleString()} XP
+                          </p>
+
+                        </div>
+
+                        <p className="font-mono text-[10px] text-muted-foreground">
+                          {currentLevel >= 7
+                            ? "MAX LEVEL"
+                            : `${nextLevelXP.toLocaleString()} XP`}
+                        </p>
+
+                      </div>
+
+
+                      {/* XP BAR */}
+
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{
+                            width: `${progress}%`,
+                          }}
+                          transition={{
+                            duration: 0.8,
+                            ease: [0.22, 1, 0.36, 1],
+                          }}
+                          className="h-full rounded-full bg-accent"
+                        />
+
+                      </div>
+
+
+                      {/* NEXT LEVEL */}
+
+                      {currentLevel < 7 && (
+                        <div className="mt-3 flex justify-between">
+
+                          <span className="font-mono text-[9px] tracking-[0.1em] text-muted-foreground">
+                            NEXT LEVEL
+                          </span>
+
+                          <span className="font-mono text-[9px] text-accent">
+                            {(
+                              nextLevelXP - currentXP
+                            ).toLocaleString()}{" "}
+                            XP TO GO
+                          </span>
+
+                        </div>
+                      )}
+
+                    </div>
+
+
+                    {/* ================= ACTIONS ================= */}
+
+                    <div className="border-t border-border">
+
+                      {/* XP SYSTEM */}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileOpen(false);
+                          router.push("/xp-system");
+                        }}
+                        className="group flex w-full items-center justify-between px-6 py-4 text-left transition-colors hover:bg-muted"
+                      >
+
+                        <div>
+
+                          <p className="font-mono text-[10px] font-bold tracking-[0.12em]">
+                            VIEW XP SYSTEM
+                          </p>
+
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            View your progression and titles
+                          </p>
+
+                        </div>
+
+                        <span className="text-lg transition-transform duration-300 group-hover:translate-x-1">
+                          →
+                        </span>
+
+                      </button>
+
+
+                      {/* LOGOUT */}
+
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="group flex w-full items-center justify-between border-t border-border px-6 py-4 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+                      >
+
+                        <div>
+
+                          <p className="font-mono text-[10px] font-bold tracking-[0.12em]">
+                            LOGOUT
+                          </p>
+
+                          <p className="mt-1 text-xs opacity-60">
+                            End current session
+                          </p>
+
+                        </div>
+
+                        <span className="text-lg transition-transform duration-300 group-hover:translate-x-1">
+                          →
+                        </span>
+
+                      </button>
+
+                    </div>
+
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+            </div>
+
+          </div>
+
+
+          {/* ================= MOBILE MENU BUTTON ================= */}
 
           <button
             ref={menuButtonRef}
             type="button"
             aria-controls="mobile-navigation"
             aria-expanded={isMenuOpen}
-            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            aria-label={
+              isMenuOpen
+                ? "Close menu"
+                : "Open menu"
+            }
             className="flex size-10 items-center justify-center rounded-card text-foreground hover:bg-surface sm:hidden"
-            onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
+            onClick={() =>
+              setIsMenuOpen((isOpen) => !isOpen)
+            }
           >
+
             <svg
               aria-hidden="true"
               className="size-5"
@@ -83,44 +448,138 @@ export function GlobalNavigation() {
               stroke="currentColor"
               strokeWidth="1.75"
             >
+
               {isMenuOpen ? (
-                <path strokeLinecap="round" d="m6 6 12 12M18 6 6 18" />
+                <path
+                  strokeLinecap="round"
+                  d="m6 6 12 12M18 6 6 18"
+                />
               ) : (
-                <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
+                <path
+                  strokeLinecap="round"
+                  d="M4 7h16M4 12h16M4 17h16"
+                />
               )}
+
             </svg>
+
           </button>
+
+
+          {/* ================= MOBILE NAVIGATION ================= */}
 
           {isMenuOpen && (
             <div
               id="mobile-navigation"
-              className="absolute right-0 top-full z-20 mt-3 w-52 rounded-card border border-border bg-background p-2 shadow-[0_12px_32px_rgb(21_21_19_/_0.08)] sm:hidden"
+              className="absolute right-0 top-full z-20 mt-3 w-56 rounded-card border border-border bg-background p-2 shadow-[0_12px_32px_rgb(21_21_19_/_0.08)] sm:hidden"
             >
+
               <ul>
-                {navigationItems.map((item) => {
-                  const isCurrentPage = pathname === item.href;
+
+                {navigation.map((item) => {
+                  const isCurrentPage =
+                    pathname === item.href;
 
                   return (
                     <li key={item.href}>
+
                       <Link
                         href={item.href}
-                        aria-current={isCurrentPage ? "page" : undefined}
+                        aria-current={
+                          isCurrentPage
+                            ? "page"
+                            : undefined
+                        }
                         className={`block rounded-[calc(var(--radius-card)-0.25rem)] px-3 py-2 text-sm font-medium ${
                           isCurrentPage
                             ? "bg-surface text-foreground"
                             : "text-muted hover:bg-surface hover:text-foreground"
                         }`}
-                        onClick={() => setIsMenuOpen(false)}
+                        onClick={() =>
+                          setIsMenuOpen(false)
+                        }
                       >
                         {item.label}
                       </Link>
+
                     </li>
                   );
                 })}
+
               </ul>
+
+              {/* MOBILE PROFILE */}
+
+              <div className="mt-2 border-t border-border pt-2">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setProfileOpen(
+                      (value) => !value
+                    )
+                  }
+                  className="flex w-full items-center gap-3 rounded-card px-3 py-3 text-left hover:bg-surface"
+                >
+
+                  <div className="relative h-10 w-10 overflow-hidden rounded-full border border-border">
+
+                    <Image
+                      src={levelIcons[currentLevel]}
+                      alt={`Level ${currentLevel}`}
+                      fill
+                      sizes="40px"
+                      className="object-cover"
+                    />
+
+                  </div>
+
+                  <div>
+
+                    <p className="text-sm font-semibold">
+                      Bhumika Khandelwal
+                    </p>
+
+                    <p className="font-mono text-[9px] tracking-[0.1em] text-muted-foreground">
+                      LEVEL {currentLevel}
+                    </p>
+
+                  </div>
+
+                </button>
+
+
+                {profileOpen && (
+                  <div className="mt-2 border-t border-border pt-2">
+
+                    <Link
+                      href="/xp-system"
+                      onClick={() =>
+                        setIsMenuOpen(false)
+                      }
+                      className="block px-3 py-2 text-xs hover:text-accent"
+                    >
+                      VIEW XP SYSTEM →
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full px-3 py-2 text-left text-xs hover:text-accent"
+                    >
+                      LOGOUT →
+                    </button>
+
+                  </div>
+                )}
+
+              </div>
+
             </div>
           )}
+
         </nav>
+
       </Container>
     </header>
   );
