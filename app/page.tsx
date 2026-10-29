@@ -2,6 +2,7 @@ import { constants } from "buffer";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { OpenChallenges } from "./components/open-challanges";
+import { HacktoberfestSpotlight } from "./components/hacktoberfest-spotlight";
 import { getChallenges } from "@/lib/db/queries";
 import {
   EXECUTIVE_COUNCIL,
@@ -134,7 +135,14 @@ export default async function Home() {
     ))}
   </div>
 </div>
-  
+
+      {/*
+        Hacktoberfest 2026.
+
+        Sits directly under the hero word-strip so the event is the first thing
+        after the club introduction, without replacing any existing section.
+      */}
+      <HacktoberfestSpotlight />
 
       {/* MISSION */}
       <section id="about">
